@@ -6,10 +6,16 @@
 --       automatically by DataInitializer.java on first boot.
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS taskmanager_db
+CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE}
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE taskmanager_db;
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}'
+
+GRANT ALL PRIVILEGES ON $MYSQL_DATABASE.* TO '$MYSQL_USER'@'%';
+FLUSH PRIVILEGES;
+
+
+USE ${MYSQL_DATABASE};
 
 -- ── Users ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
@@ -73,6 +79,20 @@ CREATE TABLE IF NOT EXISTS tasks (
     FOREIGN KEY (created_by)  REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS task_history (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    task_id     BIGINT,
+    title       VARCHAR(255),
+    description VARCHAR(255),
+    status      ENUM('TODO','IN_PROGRESS','IN_REVIEW','DONE','CANCELLED'),
+    priority    ENUM('LOW','MEDIUM','HIGH','CRITICAL'),
+    change_type VARCHAR(255),
+    changed_by  VARCHAR(255),
+    changed_at  DATETIME(6),
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+
 -- ── Notifications ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS notifications (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -117,6 +137,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE INDEX IF NOT EXISTS idx_tasks_project        ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned       ON tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_tasks_status         ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_task_history_task ON task_history(task_id);
 CREATE INDEX IF NOT EXISTS idx_notif_user           ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notif_read           ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_audit_entity         ON audit_logs(entity_type, entity_id);
